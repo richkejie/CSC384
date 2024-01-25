@@ -21,9 +21,30 @@ def heur_alternate(state):
     # Your function should return a numeric value for the estimate of the distance to the goal.
     # EXPLAIN YOUR HEURISTIC IN THE COMMENTS. Please leave this function (and your explanation) at the top of your solution file, to facilitate marking.
 
-    
+    '''My alternate heuristic is simply the sum of the Euclidean distance
+    between each yet to be stored box and the storage point nearest to it.
+    The Euclidean distance between (x0,y0) and (x1,y1) is sqrt((x0-x1)^2 + (y0-y1)^2).
+    This improves on the Manhattan distance heuristic simply because of the Pythagorean Theorem.'''
 
-    return 0  # CHANGE THIS
+    sum = 0
+    boxes = state.boxes
+    storage_spots = state.storage
+
+    not_stored = [box for box in boxes if (box not in storage_spots)]
+    for box in not_stored:
+        # print("Checking box:", box)
+        euclid_dists = []
+        for spot in storage_spots:
+            euclid_dists.append( ((box[0]-spot[0])**2 + (box[1]-spot[1])**2)**(1/2) )
+
+        # print("Euclid dists:", euclid_dists)
+        # print("Selected Euclid dist:", min(euclid_dists))
+        # print("\n")
+
+        sum += min(euclid_dists)
+
+    return sum
+    # return 0  # CHANGE THIS
 
 def heur_zero(state):
     '''Zero Heuristic can be used to make A* search perform uniform cost search'''
