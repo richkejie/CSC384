@@ -20,6 +20,9 @@ def heur_alternate(state):
     # Write a heuristic function that improves upon heur_manhattan_distance to estimate distance between the current state and the goal.
     # Your function should return a numeric value for the estimate of the distance to the goal.
     # EXPLAIN YOUR HEURISTIC IN THE COMMENTS. Please leave this function (and your explanation) at the top of your solution file, to facilitate marking.
+
+    
+
     return 0  # CHANGE THIS
 
 def heur_zero(state):
@@ -27,6 +30,9 @@ def heur_zero(state):
     return 0
 
 def heur_manhattan_distance(state):
+
+    # DONE!
+
     # IMPLEMENT
     '''admissible sokoban puzzle heuristic: manhattan distance'''
     '''INPUT: a sokoban state'''
@@ -37,7 +43,40 @@ def heur_manhattan_distance(state):
     # When calculating distances, assume there are no obstacles on the grid.
     # You should implement this heuristic function exactly, even if it is tempting to improve it.
     # Your function should return a numeric value; this is the estimate of the distance to the goal.
-    return 0  # CHANGE THIS
+
+    '''
+    Pseudocode
+    # ignoring obstacles in calculation
+    # assume many boxes can be stored at same storage spot (not actually legal)
+    # assume 'nearest' implies shortest Euclidean distance
+    for each box that is not stored:
+        find storage spot with shortest Euclidean distance to the box
+        calculate Manhattan distance between box and the storage spot
+    return sum of Manhattan distances calculated
+    '''
+
+    sum = 0
+    boxes = state.boxes
+    storage_spots = state.storage
+
+    not_stored = [box for box in boxes if (box not in storage_spots)]
+    for box in not_stored:
+        # print("Checking box:", box)
+        euclid_dists = []
+        manhat_dists = []
+        for spot in storage_spots:
+            euclid_dists.append( ((box[0]-spot[0])**2 + (box[1]-spot[1])**2)**(1/2) )
+            manhat_dists.append( abs(box[0]-spot[0]) + abs(box[1]-spot[1]) )
+
+        # print("Euclid dists:", euclid_dists)
+        # print("Manhattan dists:", manhat_dists)
+        # print("Selected Manhattan dist:", manhat_dists[euclid_dists.index(min(euclid_dists))])
+        # print("\n")
+
+        sum += manhat_dists[euclid_dists.index(min(euclid_dists))]
+
+    return sum
+    # return 0  # CHANGE THIS
 
 def fval_function(sN, weight):
     # IMPLEMENT
