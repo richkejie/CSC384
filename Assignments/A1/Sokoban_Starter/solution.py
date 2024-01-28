@@ -33,7 +33,7 @@ def heur_alternate(state):
         walls.append((state.width,y))
     obstacles = state.obstacles.union(frozenset(walls)).union(frozenset(state.boxes))
 
-    sub_obstacles = state.obstacles.union(frozenset(walls))
+    sub_obstacles = state.obstacles.union(frozenset(walls)) # used for dead_cuz_multiple_boxes
 
     not_stored = [box for box in state.boxes if (box not in state.storage)]
     for box in not_stored:
@@ -47,18 +47,21 @@ def heur_alternate(state):
     
     result = 0
 
+    # having the *2 and then -1 resulted in 18/22 passed!!! -- don't delete this, just comment out and make new copy!!!
     for box in not_stored:
         closest_dist = float('inf')
         for robot in state.robots:
             man_dist = abs(robot[0]-box[0]) + abs(robot[1]-box[1])
-            closest_dist = min(man_dist + num_obstacles_between(robot, box, state), closest_dist)
+            closest_dist = min(man_dist + num_obstacles_between(robot, box, state)*2, closest_dist)
         result += closest_dist
 
         closest_dist = float('inf')
         for storage in state.storage:
             man_dist = abs(storage[0]-box[0]) + abs(storage[1]-box[1])
-            closest_dist = min(man_dist + num_obstacles_between(box, storage, state), closest_dist)
+            closest_dist = min(man_dist + num_obstacles_between(box, storage, state)-1, closest_dist)
         result += closest_dist
+
+    
     
     return result
 
