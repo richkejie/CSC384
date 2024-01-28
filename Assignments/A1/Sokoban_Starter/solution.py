@@ -21,30 +21,135 @@ def heur_alternate(state):
     # Your function should return a numeric value for the estimate of the distance to the goal.
     # EXPLAIN YOUR HEURISTIC IN THE COMMENTS. Please leave this function (and your explanation) at the top of your solution file, to facilitate marking.
 
-    '''My alternate heuristic is simply the sum of the Euclidean distance
-    between each yet to be stored box and the storage point nearest to it.
-    The Euclidean distance between (x0,y0) and (x1,y1) is sqrt((x0-x1)^2 + (y0-y1)^2).
-    This improves on the Manhattan distance heuristic simply because of the Pythagorean Theorem.'''
 
-    sum = 0
-    boxes = state.boxes
-    storage_spots = state.storage
+    '''EXPLAIN!!!'''
 
-    not_stored = [box for box in boxes if (box not in storage_spots)]
+    walls = []
+    for x in range(state.width):
+        walls.append((x,-1))
+        walls.append((x,state.height))
+    for y in range(state.height):
+        walls.append((-1,y))
+        walls.append((state.width,y))
+    obstacles = state.obstacles.union(frozenset(walls)).union(frozenset(state.boxes))
+
+    sub_obstacles = state.obstacles.union(frozenset(walls))
+
+    not_stored = [box for box in state.boxes if (box not in state.storage)]
     for box in not_stored:
-        # print("Checking box:", box)
-        euclid_dists = []
-        for spot in storage_spots:
-            euclid_dists.append( ((box[0]-spot[0])**2 + (box[1]-spot[1])**2)**(1/2) )
+        
+        if in_corner(box, obstacles):
+            return float('inf')
+        elif along_edge_without_storage(box, state):
+            return float('inf')
+        # elif dead_cuz_multiple_boxes(box, state, sub_obstacles):
+        #     return float('inf')
+    
+    result = 0
 
-        # print("Euclid dists:", euclid_dists)
-        # print("Selected Euclid dist:", min(euclid_dists))
-        # print("\n")
+    for box in not_stored:
+        closest_dist = float('inf')
+        for robot in state.robots:
+            man_dist = abs(robot[0]-box[0]) + abs(robot[1]-box[1])
+            closest_dist = min(man_dist + num_obstacles_between(robot, box, state), closest_dist)
+        result += closest_dist
 
-        sum += min(euclid_dists)
+        closest_dist = float('inf')
+        for storage in state.storage:
+            man_dist = abs(storage[0]-box[0]) + abs(storage[1]-box[1])
+            closest_dist = min(man_dist + num_obstacles_between(box, storage, state), closest_dist)
+        result += closest_dist
+    
+    return result
 
-    return sum
+    # return heur_manhattan_distance(state)
+
+
     # return 0  # CHANGE THIS
+
+def num_obstacles_between(A, B, state):
+
+    '''Returns the number of obstacles within the grid formed by point A and B.'''
+
+    result = 0
+    (left, right) = (min(A[0], B[0]), max(A[0], B[0]))
+    (upper, lower) = (min(A[1], B[1]), max(A[1], B[1]))
+    for obstacle in state.obstacles:
+        if left < obstacle[0] < right and upper < obstacle[0] < lower:
+            result += 1
+    return result
+
+# Functions that check for dead states
+def in_corner(box, obstacles):
+    '''Returns True if two adjacent sides of the box is either an obstacle or a wall. False otherwise.'''
+
+    # combine obstacles and walls
+
+    (x, y) = box
+    # check top left of box
+    if (x-1,y) in obstacles and (x,y-1) in obstacles:
+        return True
+    # check top right of box
+    elif (x+1,y) in obstacles and (x,y-1) in obstacles:
+        return True
+    # check bottom right of box
+    elif (x+1,y) in obstacles and (x,y+1) in obstacles:
+        return True
+    # check bottom left of box
+    elif (x-1,y) in obstacles and (x,y+1) in obstacles:
+        return True
+    
+    return False
+
+def along_edge_without_storage(box, state):
+    '''Returns True if box is along a wall without a storage spot. False otherwise'''
+
+    (x, y) = box
+    # Check if box is on a wall
+    if (0 < x < state.width-1) and (0 < y < state.height-1):
+        return False # box is not on wall
+    
+    x_coords = []
+    y_coords = []
+
+    # available_spots = [storage for storage in state.storage if (storage not in state.boxes)]:
+
+    for spot in [storage for storage in state.storage if (storage not in state.boxes)]:
+        x_coords.append(spot[0])
+        y_coords.append(spot[1])
+    if (x == 0 or x == state.width-1) and x not in x_coords:
+        return True
+    elif (y == 0 or y == state.height-1) and y not in y_coords:
+        return True
+ 
+    return False
+
+def dead_cuz_multiple_boxes(box, state, obstacles):
+
+    (x, y) = box
+    up = (x, y + 1)
+    down = (x, y - 1)
+    left = (x - 1, y)
+    right = (x + 1, y)
+    surround_boxes = set((up, down, left, right)).union(state.boxes)
+    if len(surround_boxes) == 0:
+        return False
+    
+    for neighbour_box in surround_boxes:
+        x1 = neighbour_box[0]
+        y1 = neighbour_box[1]
+        if x1 == x:
+            # same column
+            if (((x+1,y),(x1+1,y1)) in obstacles) or (((x-1,y),(x1+1,y1)) in obstacles) or (((x-1,y),(x1-1,y1)) in obstacles) or (((x+1,y),(x1-1,y1)) in obstacles):
+                return True
+        elif y1 == y:
+            # same row
+            if (((x,y+1),(x1,y1+1)) in obstacles) or (((x,y-1),(x1,y1+1)) in obstacles) or (((x,y-1),(x1,y1-1)) in obstacles) or (((x,y+1),(x1,y1-1)) in obstacles):
+                return True
+
+    return False
+
+
 
 def heur_zero(state):
     '''Zero Heuristic can be used to make A* search perform uniform cost search'''
@@ -109,7 +214,9 @@ def fval_function(sN, weight):
     @param float weight: Weight given by Anytime Weighted A star
     @rtype: float
     """
-    return 0 #CHANGE THIS
+    return sN.gval + weight * sN.hval
+
+    # return 0 #CHANGE THIS
 
 # SEARCH ALGORITHMS
 def weighted_astar(initial_state, heur_fn, weight, timebound):
@@ -118,6 +225,12 @@ def weighted_astar(initial_state, heur_fn, weight, timebound):
     '''INPUT: a sokoban state that represents the start state and a timebound (number of seconds)'''
     '''OUTPUT: A goal state (if a goal is found), else False as well as a SearchStats object'''
     '''implementation of weighted astar algorithm'''
+
+
+    engine = SearchEngine('custom', 'full')
+    engine.init_search(initial_state, sokoban_goal_state, heur_fn, (lambda sN: fval_function(sN, weight)))
+
+
     return None, None  # CHANGE THIS
 
 def iterative_astar(initial_state, heur_fn, weight=1, timebound=5):  # uses f(n), see how autograder initializes a search line 88
