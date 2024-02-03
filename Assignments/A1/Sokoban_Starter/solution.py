@@ -250,34 +250,21 @@ def weighted_astar(initial_state, heur_fn, weight, timebound):
     se = SearchEngine('custom', 'full')
     # custom search strategy --> need to specify fval function
     # full --> full cycle checking
-    se.init_search(initial_state, sokoban_goal_state, heur_fn, (lambda sN: fval_function(sN, weight)))
     
     result = None, None
     best_cost = float('inf') # set no best cost initially
     time_remaining = end_time - os.times()[0]
 
-    '''costbound is defined as a list of three values. costbound[0] is used to prune
-    states based on their g-values; any state with a g-value higher than costbound[0] will not be
-    expanded. costbound[1] is used to prune states based on their h-values;
-    any state with an hvalue higher than costbound[1] will not be expanded.
-    Finally, costbound[2] is used to prune states based on their f-values;
-    any state with an f-value higher than costbound[2] will not be expanded.'''
-    # costbound = (float('inf'), float('inf'), float('inf')) # initially, don't set any costbound
-    # final_state = se.search(timebound, costbound)
-
     while time_remaining > 0:
+        se.init_search(initial_state, sokoban_goal_state, heur_fn, (lambda sN: fval_function(sN, weight)))
         final = se.search(time_remaining - 0.1, (float('inf'), float('inf'), best_cost))
         weight = weight*multiplier # decrease weight for next iteration to find better solution
         time_remaining = end_time - os.times()[0]
-
         
         goal, stats = final
 
         if goal:
             result = final
-            # print("found a goal:", goal)
-            # print("gval:", goal.gval)
-            # best_cost = goal.gval + heur_fn(goal) - 1
             best_cost = goal.gval + heur_fn(goal) - 1
         else:
             break
