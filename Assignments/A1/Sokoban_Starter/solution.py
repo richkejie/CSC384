@@ -24,6 +24,7 @@ def heur_alternate(state):
     # EXPLAIN YOUR HEURISTIC IN THE COMMENTS. Please leave this function (and your explanation) at the top of your solution file, to facilitate marking.
 
 
+
     '''EXPLAIN!!!'''
     result = 0
 
@@ -37,41 +38,40 @@ def heur_alternate(state):
 
     obstacles = state.obstacles.union(frozenset(walls))
 
-    not_stored = [box for box in state.boxes if (box not in state.storage)]
-    for box in not_stored:
-        if in_corner(box, obstacles): #!!!!
-            return float('inf')
-        elif along_edge_without_storage(box, state):
-            return float('inf')
-        dead, num_neighbour_boxes = dead_cuz_multiple_boxes(box, state, obstacles)
-        if dead:
-            return float('inf')
-        else:
-            result += 1*num_neighbour_boxes
-
-    used_storages = []
-    total_box_storage_cost = 0
+    # not_stored = [box for box in state.boxes if (box not in state.storage)]
     for box in state.boxes:
-        min_dist = float('inf')
-        current_used_storage = None
-        for storage in state.storage:
-            if storage not in used_storages:
-                dist = abs(box[0] - storage[0]) + abs(box[1] - storage[1]) + num_objects_within(box,storage,state.obstacles)*2
-                if dist < min_dist:
-                    current_used_storage = storage
-                    min_dist = dist
-        used_storages.append(current_used_storage)
-        total_box_storage_cost += min_dist
+        if box not in state.storage:
+            if in_corner(box, obstacles): #!!!!
+                return float('inf')
+            elif along_edge_without_storage(box, state):
+                return float('inf')
+            dead, num_neighbour_boxes = dead_cuz_multiple_boxes(box, state, obstacles)
+            if dead:
+                return float('inf')
+            else:
+                result += num_neighbour_boxes
 
-    result += total_box_storage_cost
+    used_storages = [storage for storage in state.storage if (storage in state.boxes)]
+    for box in state.boxes:
+        if box not in state.storage:
+            min_dist = float('inf')
+            current_used_storage = None
+            for storage in state.storage:
+                if storage not in used_storages:
+                    dist = abs(box[0] - storage[0]) + abs(box[1] - storage[1]) # + num_objects_within(box,storage,state.obstacles)*2
+                    if dist < min_dist:
+                        current_used_storage = storage
+                        min_dist = dist
+            used_storages.append(current_used_storage)
+            result += min_dist
 
-    for box in not_stored:
-        closest_dist = float('inf')
-        for robot in state.robots:
-            dist = abs(robot[0]-box[0]) + abs(robot[1]-box[1]) +  num_objects_within(robot, box, state.obstacles) + num_objects_within(box, storage, state.boxes)
-            closest_dist = min(dist, closest_dist)
-        result += closest_dist
-
+    for box in state.boxes:
+        if box not in state.storage:
+            min_dist = float('inf')
+            for robot in state.robots:
+                dist = abs(robot[0]-box[0]) + abs(robot[1]-box[1]) # +  num_objects_within(robot, box, state.obstacles)
+                min_dist = min(dist, min_dist)
+            result += min_dist
 
     '''
     for box in not_stored:
@@ -197,17 +197,11 @@ def in_corner(box, obstacles):
     # combine obstacles and walls
 
     # (x, y) = box
-    # check top left of box
-    if LEFT.move(box) in obstacles and UP.move(box) in obstacles:
+    # check top/bottom left of box
+    if LEFT.move(box) in obstacles and (UP.move(box) in obstacles or DOWN.move(box) in obstacles):
         return True
-    # check top right of box
-    elif RIGHT.move(box) in obstacles and UP.move(box) in obstacles:
-        return True
-    # check bottom right of box
-    elif RIGHT.move(box) in obstacles and DOWN.move(box) in obstacles:
-        return True
-    # check bottom left of box
-    elif LEFT.move(box) in obstacles and DOWN.move(box) in obstacles:
+    # check top/bottom right of box
+    elif RIGHT.move(box) in obstacles and (UP.move(box) in obstacles or DOWN.move(box) in obstacles):
         return True
     
     return False
@@ -389,7 +383,7 @@ def iterative_astar(initial_state, heur_fn, weight=1, timebound=5):  # uses f(n)
     while time_remaining > 0:
         se.init_search(initial_state, sokoban_goal_state, heur_fn, (lambda sN: fval_function(sN, weight)))
         final = se.search(time_remaining - 0.1, (float('inf'), float('inf'), best_cost))
-        weight = min(weight*multiplier,1) # decrease weight for next iteration to find better solution
+        weight = max(weight*multiplier,1) # decrease weight for next iteration to find better solution
         time_remaining = end_time - os.times()[0]
         
         goal, stats = final
