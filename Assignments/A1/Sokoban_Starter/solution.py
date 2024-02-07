@@ -10,6 +10,8 @@ import math  # for infinity
 from search import *  # for search engines
 from sokoban import sokoban_goal_state, SokobanState, Direction, PROBLEMS  # for Sokoban specific classes and problems
 
+from sokoban import UP, RIGHT, DOWN, LEFT
+
 # SOKOBAN HEURISTICS
 def heur_alternate(state):
     # IMPLEMENT
@@ -23,6 +25,7 @@ def heur_alternate(state):
 
 
     '''EXPLAIN!!!'''
+    result = 0
 
     walls = []
     for x in range(state.width):
@@ -31,68 +34,155 @@ def heur_alternate(state):
     for y in range(state.height):
         walls.append((-1,y))
         walls.append((state.width,y))
-    obstacles = state.obstacles.union(frozenset(walls)).union(frozenset(state.boxes))
 
-    sub_obstacles = state.obstacles.union(frozenset(walls)) # used for dead_cuz_multiple_boxes
+    obstacles = state.obstacles.union(frozenset(walls))
 
     not_stored = [box for box in state.boxes if (box not in state.storage)]
     for box in not_stored:
         
-        if in_corner(box, obstacles):
+        if in_corner(box, obstacles): #!!!!
             return float('inf')
         elif along_edge_without_storage(box, state):
             return float('inf')
-        # elif dead_cuz_multiple_boxes(box, state, sub_obstacles):
-        #     return float('inf')
-    
-    result = 0
+        dead, num_neighbour_boxes = dead_cuz_multiple_boxes(box, state, obstacles)
+        if dead:
+            return float('inf')
+        else:
+            result += 1*num_neighbour_boxes
 
-    # having the *2 and then -1 resulted in 18/22 passed!!! -- don't delete this, just comment out and make new copy!!!
-    # for box in not_stored:
-    #     closest_dist = float('inf')
-    #     for robot in state.robots:
-    #         man_dist = abs(robot[0]-box[0]) + abs(robot[1]-box[1])
-    #         closest_dist = min(man_dist + num_obstacles_between(robot, box, state)*2, closest_dist)
-    #     result += closest_dist
+    used_storages = []
+    total_box_storage_cost = 0
+    for box in state.boxes:
+        min_dist = float('inf')
+        current_used_storage = None
+        for storage in state.storage:
+            if storage not in used_storages:
+                dist = abs(box[0] - storage[0]) + abs(box[1] - storage[1])
+                if dist < min_dist:
+                    current_used_storage = storage
+                    min_dist = dist
+        used_storages.append(current_used_storage)
+        total_box_storage_cost += min_dist
 
-    #     closest_dist = float('inf')
-    #     for storage in state.storage:
-    #         man_dist = abs(storage[0]-box[0]) + abs(storage[1]-box[1])
-    #         closest_dist = min(man_dist + num_obstacles_between(box, storage, state)-1, closest_dist)
-    #     result += closest_dist
+    result += total_box_storage_cost
 
-    # new weights --> 19/22 passed!!!
+
+    '''
     for box in not_stored:
         closest_dist = float('inf')
         for robot in state.robots:
             man_dist = abs(robot[0]-box[0]) + abs(robot[1]-box[1])
-            closest_dist = min(man_dist + num_obstacles_between(robot, box, state)*2, closest_dist)
+            closest_dist = min(man_dist + num_objects_within(robot, box, state.obstacles), closest_dist)
+            # print("box:", box, "robot:", robot)
+            # print("closest:", closest_dist)
         result += closest_dist
 
         closest_dist = float('inf')
         for storage in state.storage:
             man_dist = abs(storage[0]-box[0]) + abs(storage[1]-box[1])
-            closest_dist = min(man_dist + num_obstacles_between(box, storage, state)-1.2, closest_dist)
-        result += closest_dist   
-    
+            closest_dist = min(man_dist + num_objects_within(box, storage, state.obstacles)*2, closest_dist)
+            # print("box:", box, "storage:", storage)
+            # print("closest:", closest_dist)
+        result += closest_dist 
+    ''' 
+
+    '''
+    # this gets 19/22 for bfs w/out dead_cuz_multiple_boxes check and in_corner check includes boxes in obstacles
+    for box in not_stored:
+        closest_dist = float('inf')
+        for robot in state.robots:
+            man_dist = abs(robot[0]-box[0]) + abs(robot[1]-box[1])
+            closest_dist = min(man_dist + num_objects_within(robot, box, state.obstacles)*2, closest_dist)
+            # print("box:", box, "robot:", robot)
+            # print("closest:", closest_dist)
+        result += closest_dist
+
+        closest_dist = float('inf')
+        for storage in state.storage:
+            man_dist = abs(storage[0]-box[0]) + abs(storage[1]-box[1])
+            closest_dist = min(man_dist + num_objects_within(box, storage, state.obstacles)-1.2, closest_dist)
+            # print("box:", box, "storage:", storage)
+            # print("closest:", closest_dist)
+        result += closest_dist
+    '''
+
+    '''
+    for box in not_stored:
+        closest_dist = float('inf')
+        for robot in state.robots:
+            man_dist = abs(robot[0]-box[0]) + abs(robot[1]-box[1])
+            closest_dist = min(man_dist + num_objects_between(robot, box, state.obstacles), closest_dist)
+            # print("box:", box, "robot:", robot)
+            # print("closest:", closest_dist)
+        result += closest_dist
+
+        closest_dist = float('inf')
+        for storage in state.storage:
+            man_dist = abs(storage[0]-box[0]) + abs(storage[1]-box[1])
+            closest_dist = min(man_dist + num_objects_between(box, storage, state.obstacles)*2, closest_dist)
+            # print("box:", box, "storage:", storage)
+            # print("closest:", closest_dist)
+        result += closest_dist  
+    ''' 
+
     return result
 
-    # return heur_manhattan_distance(state)
+
+''' 
+(even) better heuristic ideas:
+
+- find a lowest cost perfect matching bipartite graph between boxes and storage:
+    - i.e., find the man_dist+num_obs cost between each pair of (box,storage)
+    - treat these costs as edges in a graph, and boxes and storages as vertices
+    - reduce graph to perfect matching bipartite graph that has lowest total edge costs
+    - boxes in one group, storages in the other group
+    - this is the assignment problem --> popular solving algorithm: the Hungarian method
 
 
-    # return 0  # CHANGE THIS
+- more deadlock state checks:
+    - ...
 
-def num_obstacles_between(A, B, state):
+- 
 
-    '''Returns the number of obstacles within the grid formed by point A and B.'''
+'''
+
+
+def num_objects_within(A, B, objects):
+
+    '''Returns the number of objects (obstacles) within the grid formed by point A and B.'''
 
     result = 0
     (left, right) = (min(A[0], B[0]), max(A[0], B[0]))
     (upper, lower) = (min(A[1], B[1]), max(A[1], B[1]))
-    for obstacle in state.obstacles:
-        if left < obstacle[0] < right and upper < obstacle[0] < lower:
+    for object in objects:
+        if left < object[0] < right and upper < object[0] < lower:
             result += 1
     return result
+
+def num_objects_between(A, B, objects):
+
+    '''Returns the number of objects (obstacles) along the straight line between point A and B'''
+    
+    if A[0] == B[0] or A[1] == B[1]:
+        return num_objects_within(A, B, objects)
+
+    result = 0
+    a = B[1] - A[1]
+    b = A[0] - B[0]
+    c = A[1]*(B[0] - A[0]) - A[0]*(B[1] - A[1])
+
+    (left, right) = (min(A[0], B[0]), max(A[0], B[0]))
+    (upper, lower) = (min(A[1], B[1]), max(A[1], B[1]))
+    for object in objects:
+        if left < object[0] < right and upper < object[0] < lower:
+            d = abs(a*object[0] + b*object[1] + c)/(a**2 + b**2)**(1/2)
+            if d < 2:
+                result += 1
+    return result
+
+
+
+
 
 # Functions that check for dead states
 def in_corner(box, obstacles):
@@ -100,18 +190,18 @@ def in_corner(box, obstacles):
 
     # combine obstacles and walls
 
-    (x, y) = box
+    # (x, y) = box
     # check top left of box
-    if (x-1,y) in obstacles and (x,y-1) in obstacles:
+    if LEFT.move(box) in obstacles and UP.move(box) in obstacles:
         return True
     # check top right of box
-    elif (x+1,y) in obstacles and (x,y-1) in obstacles:
+    elif RIGHT.move(box) in obstacles and UP.move(box) in obstacles:
         return True
     # check bottom right of box
-    elif (x+1,y) in obstacles and (x,y+1) in obstacles:
+    elif RIGHT.move(box) in obstacles and DOWN.move(box) in obstacles:
         return True
     # check bottom left of box
-    elif (x-1,y) in obstacles and (x,y+1) in obstacles:
+    elif LEFT.move(box) in obstacles and DOWN.move(box) in obstacles:
         return True
     
     return False
@@ -141,30 +231,54 @@ def along_edge_without_storage(box, state):
 
 def dead_cuz_multiple_boxes(box, state, obstacles):
 
+    # obstacles contains original obstacles and walls
+
     (x, y) = box
-    up = (x, y + 1)
-    down = (x, y - 1)
-    left = (x - 1, y)
-    right = (x + 1, y)
-    surround_boxes = set((up, down, left, right)).union(state.boxes)
+    up = UP.move(box)
+    down = DOWN.move(box)
+    left = LEFT.move(box)
+    right = RIGHT.move(box)
+    surround_boxes = set((up, down, left, right)).intersection(state.boxes)
     if len(surround_boxes) == 0:
-        return False
+        return (False, 0)
     
+    '''If two boxes are next to each other, it is only dead if:
+    [obs][box]
+    [obs][box]
+
+         [box][obs]
+    [obs][box]
+
+    [obs][box]
+         [box][obs]
+    
+    [box][obs]
+    [box][obs]
+
+    and same for horizontal alignment of boxes
+    '''
+
+    dead = False
+
     for neighbour_box in surround_boxes:
-        x1 = neighbour_box[0]
-        y1 = neighbour_box[1]
-        if x1 == x:
-            # same column
-            if (((x+1,y),(x1+1,y1)) in obstacles) or (((x-1,y),(x1+1,y1)) in obstacles) or (((x-1,y),(x1-1,y1)) in obstacles) or (((x+1,y),(x1-1,y1)) in obstacles):
-                return True
-        elif y1 == y:
-            # same row
-            if (((x,y+1),(x1,y1+1)) in obstacles) or (((x,y-1),(x1,y1+1)) in obstacles) or (((x,y-1),(x1,y1-1)) in obstacles) or (((x,y+1),(x1,y1-1)) in obstacles):
-                return True
+        if neighbour_box[0] == x:
+            # boxes aligned vertically
+            if (left in obstacles or right in obstacles) and (LEFT.move(neighbour_box) in obstacles or RIGHT.move(neighbour_box) in obstacles):
+                dead = True
+        elif neighbour_box[1] == y:
+            # boxes aligned horizontally
+            if (up in obstacles or down in obstacles) and (UP.move(neighbour_box) in obstacles or DOWN.move(neighbour_box) in obstacles):
+                dead = True
 
-    return False
+    # print("Box:", box)
+    # print(dead)
+    # print(len(surround_boxes))
+    return (dead, len(surround_boxes))
+
+# other helper functions
 
 
+# other assignment functions
 
 def heur_zero(state):
     '''Zero Heuristic can be used to make A* search perform uniform cost search'''
@@ -241,11 +355,22 @@ def weighted_astar(initial_state, heur_fn, weight, timebound):
     '''OUTPUT: A goal state (if a goal is found), else False as well as a SearchStats object'''
     '''implementation of weighted astar algorithm'''
 
+    se = SearchEngine('custom', 'full')
+    se.init_search(initial_state, sokoban_goal_state, heur_fn, (lambda sN: fval_function(sN, weight)))
+    final = se.search(timebound, (float('inf'), float('inf'), float('inf')))
+    return final
+
+def iterative_astar(initial_state, heur_fn, weight=1, timebound=5):  # uses f(n), see how autograder initializes a search line 88
+    # IMPLEMENT
+    '''Provides an implementation of realtime a-star, as described in the HW1 handout'''
+    '''INPUT: a sokoban state that represents the start state and a timebound (number of seconds)'''
+    '''OUTPUT: A goal state (if a goal is found), else False as well as a SearchStats object'''
+    '''implementation of iterative astar algorithm'''
 
     end_time = os.times()[0] + timebound
     time_remaining = timebound
 
-    multiplier = 0.6 # can change
+    multiplier = 0.5 # can change
 
     se = SearchEngine('custom', 'full')
     # custom search strategy --> need to specify fval function
@@ -258,33 +383,18 @@ def weighted_astar(initial_state, heur_fn, weight, timebound):
     while time_remaining > 0:
         se.init_search(initial_state, sokoban_goal_state, heur_fn, (lambda sN: fval_function(sN, weight)))
         final = se.search(time_remaining - 0.1, (float('inf'), float('inf'), best_cost))
-        weight = weight*multiplier # decrease weight for next iteration to find better solution
+        weight = min(weight*multiplier,1) # decrease weight for next iteration to find better solution
         time_remaining = end_time - os.times()[0]
         
         goal, stats = final
 
         if goal:
             result = final
-            best_cost = goal.gval + heur_fn(goal) - 1
+            best_cost = goal.gval
         else:
             break
     
     return result
-
-
-
-    # return None, None  # CHANGE THIS
-
-def iterative_astar(initial_state, heur_fn, weight=1, timebound=5):  # uses f(n), see how autograder initializes a search line 88
-    # IMPLEMENT
-    '''Provides an implementation of realtime a-star, as described in the HW1 handout'''
-    '''INPUT: a sokoban state that represents the start state and a timebound (number of seconds)'''
-    '''OUTPUT: A goal state (if a goal is found), else False as well as a SearchStats object'''
-    '''implementation of iterative astar algorithm'''
-
-    result = weighted_astar(initial_state, heur_fn, weight, timebound)
-    return result
-    # return None, None #CHANGE THIS
 
 def iterative_gbfs(initial_state, heur_fn, timebound=5):  # only use h(n)
     # IMPLEMENT
@@ -305,15 +415,6 @@ def iterative_gbfs(initial_state, heur_fn, timebound=5):  # only use h(n)
     best_cost = float('inf') # set no best cost initially
     time_remaining = end_time - os.times()[0]
 
-    '''costbound is defined as a list of three values. costbound[0] is used to prune
-    states based on their g-values; any state with a g-value higher than costbound[0] will not be
-    expanded. costbound[1] is used to prune states based on their h-values;
-    any state with an hvalue higher than costbound[1] will not be expanded.
-    Finally, costbound[2] is used to prune states based on their f-values;
-    any state with an f-value higher than costbound[2] will not be expanded.'''
-    # costbound = (float('inf'), float('inf'), float('inf')) # initially, don't set any costbound
-    # final_state = se.search(timebound, costbound)
-
     while time_remaining > 0:
         final = se.search(time_remaining - 0.1, (best_cost, float('inf'), float('inf')))
         time_remaining = end_time - os.times()[0]
@@ -322,16 +423,11 @@ def iterative_gbfs(initial_state, heur_fn, timebound=5):  # only use h(n)
 
         if goal:
             result = final
-            # print("found a goal:", goal)
-            # print("gval:", goal.gval)
-            # best_cost = goal.gval + heur_fn(goal) - 1
-            best_cost = goal.gval  - 1
+            best_cost = goal.gval
         else:
             break
     
     return result
-
-    return None, None #CHANGE THIS
 
 
 
