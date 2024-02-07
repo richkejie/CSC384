@@ -39,7 +39,6 @@ def heur_alternate(state):
 
     not_stored = [box for box in state.boxes if (box not in state.storage)]
     for box in not_stored:
-        
         if in_corner(box, obstacles): #!!!!
             return float('inf')
         elif along_edge_without_storage(box, state):
@@ -57,7 +56,7 @@ def heur_alternate(state):
         current_used_storage = None
         for storage in state.storage:
             if storage not in used_storages:
-                dist = abs(box[0] - storage[0]) + abs(box[1] - storage[1])
+                dist = abs(box[0] - storage[0]) + abs(box[1] - storage[1]) + num_objects_within(box,storage,state.obstacles)*2
                 if dist < min_dist:
                     current_used_storage = storage
                     min_dist = dist
@@ -65,6 +64,13 @@ def heur_alternate(state):
         total_box_storage_cost += min_dist
 
     result += total_box_storage_cost
+
+    for box in not_stored:
+        closest_dist = float('inf')
+        for robot in state.robots:
+            dist = abs(robot[0]-box[0]) + abs(robot[1]-box[1]) +  num_objects_within(robot, box, state.obstacles) + num_objects_within(box, storage, state.boxes)
+            closest_dist = min(dist, closest_dist)
+        result += closest_dist
 
 
     '''
