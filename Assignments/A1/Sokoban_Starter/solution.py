@@ -382,7 +382,7 @@ def iterative_astar(initial_state, heur_fn, weight=1, timebound=5):  # uses f(n)
 
     while time_remaining > 0:
         se.init_search(initial_state, sokoban_goal_state, heur_fn, (lambda sN: fval_function(sN, weight)))
-        final = se.search(time_remaining - 0.1, (float('inf'), float('inf'), best_cost))
+        final = se.search(time_remaining - 0.02, (float('inf'), float('inf'), best_cost))
         weight = max(weight*multiplier,1) # decrease weight for next iteration to find better solution
         time_remaining = end_time - os.times()[0]
         
@@ -416,7 +416,7 @@ def iterative_gbfs(initial_state, heur_fn, timebound=5):  # only use h(n)
     time_remaining = end_time - os.times()[0]
 
     while time_remaining > 0:
-        final = se.search(time_remaining - 0.1, (best_cost, float('inf'), float('inf')))
+        final = se.search(time_remaining - 0.02, (best_cost, float('inf'), float('inf')))
         time_remaining = end_time - os.times()[0]
 
         goal, stats = final
