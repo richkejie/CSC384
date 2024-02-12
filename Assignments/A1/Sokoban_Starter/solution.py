@@ -239,7 +239,7 @@ def iterative_astar(initial_state, heur_fn, weight=1, timebound=5):  # uses f(n)
     result = None, None
     best_cost = math.inf # set no best cost initially
     processing_time = 0.05
-    found = True
+    found = False
     time_remaining = end_time - os.times()[0]
 
     while time_remaining > processing_time:
@@ -252,6 +252,7 @@ def iterative_astar(initial_state, heur_fn, weight=1, timebound=5):  # uses f(n)
         if goal:
             result = final
             best_cost = goal.gval
+            found = True
         else:
             if not found:
                 return False, stats
