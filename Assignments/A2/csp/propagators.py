@@ -85,6 +85,11 @@ def prop_FC(csp, newVar=None):
         # if newVar not given, check all constraints
         constraints = csp.get_all_cons()
 
+    num = 0
+    for cons in constraints:
+        if cons.get_n_unasgn() == 1:
+            num += 1
+
     # keep track of [(Variable, Value), (Variable, Value) ...]
     # where (Variable, Value) represents Value having been pruned
     # from Variable's domain by prop_FC
@@ -93,8 +98,8 @@ def prop_FC(csp, newVar=None):
     def check(cons, var):
         '''Check that all values in variable var's current domain satisfy
            the constraint cons. If a value does not, prune it, and record
-           it in the list pruned. Return True if DWO does not occur, False
-           otherwise.'''
+           it in the list pruned. Return True if DWO does not occur.
+           Otherwise, return False immediately.'''
         
         for d in var.cur_domain():
             # assign d to var
@@ -179,7 +184,8 @@ def prop_FI(csp, newVar=None):
                 # if DWO did not occur, check if any values were
                 # pruned from v's domain, if so, add v back to queue
                 if v.cur_domain() != S:
-                    queue.append(v)
+                    if v not in queue:
+                        queue.append(v)
 
     # FI finishes without DWO, return True
     return True, pruned
