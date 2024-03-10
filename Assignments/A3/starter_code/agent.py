@@ -15,7 +15,18 @@ def eprint(*args, **kwargs): #you can use this for debugging, as it will print t
 # Method to compute utility value of terminal state
 def compute_utility(board, color):
     #IMPLEMENT
-    return 0 #change this!
+    
+    # assume this is called only on terminal states
+    # so do not have to check whether state is terminal or not
+    final_score = get_score(board)
+    if color == 1:
+        # 1 is 1st company
+        return final_score[0] - final_score[1]
+    else:
+        # 2 is 2nd company
+        return final_score[1] - final_score[0]
+
+    # return 0 #change this!
 
 # Better heuristic value of board
 def compute_heuristic(board, color): #not implemented, optional
@@ -23,13 +34,59 @@ def compute_heuristic(board, color): #not implemented, optional
     return 0 #change this!
 
 ############ MINIMAX ###############################
+def opponent(color):
+    if color == 1:
+        return 2
+    else:
+        return 1
+
 def minimax_min_node(board, color, limit, caching = 0):
     #IMPLEMENT (and replace the line below)
-    return ((0,0),0)
+
+    # returns a tuple: ((r,c), util)
+    # where (r,c) is the best move with utility util
+
+    moves = get_possible_moves(board, color)
+    if moves == []:
+        # we have reached a terminal state (base case)
+        return (None, (-1) * compute_utility(board, color))
+
+    min_util = float("inf")
+    best_move = moves[0]
+
+    for i in range(len(moves)):
+        util = minimax_max_node(play_move(board, opponent(color), moves[i][0], moves[i][1]), limit-1, caching)[1]
+        if util < min_util:
+            best_move = moves[i]
+            min_util = util
+    
+    return (best_move, min_util)
+
+    # return ((0,0),0)
 
 def minimax_max_node(board, color, limit, caching = 0): #returns highest possible utility
     #IMPLEMENT (and replace the line below)
-    return ((0,0),0)
+
+    # returns a tuple: ((r,c), util)
+    # where (r,c) is the best move with utility util
+
+    moves = get_possible_moves(board, color)
+    if moves == []:
+        # we have reached a terminal state (base case)
+        return (None, compute_utility(board, color))
+
+    max_util = float("-inf")
+    best_move = moves[0]
+
+    for i in range(len(moves)):
+        util = minimax_min_node(play_move(board, opponent(color), moves[i][0], moves[i][1]), limit-1, caching)[1]
+        if util > max_util:
+            best_move = moves[i]
+            max_util = util
+    
+    return (best_move, max_util)
+
+    # return ((0,0),0)
 
 def select_move_minimax(board, color, limit, caching = 0):
     """
@@ -45,7 +102,11 @@ def select_move_minimax(board, color, limit, caching = 0):
     If caching is OFF (i.e. 0), do NOT use state caching to reduce the number of state evaluations.    
     """
     #IMPLEMENT (and replace the line below)
-    return (0,0) #change this!
+
+    # it is our turn, so call max node first
+    return minimax_max_node(board, color, limit, caching)[0]
+
+    # return (0,0) #change this!
 
 ############ ALPHA-BETA PRUNING #####################
 def alphabeta_min_node(board, color, alpha, beta, limit, caching = 0, ordering = 0):
