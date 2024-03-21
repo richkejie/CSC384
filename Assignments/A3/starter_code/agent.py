@@ -10,11 +10,13 @@ import time
 from othello_shared import find_lines, get_possible_moves, get_score, play_move
 
 # caching dictionaries
-min_cache = {}
-max_cache = {}
-alphabeta_min_cache = {}
-alphabeta_max_cache = {}
+# min_cache = {}
+# max_cache = {}
+# alphabeta_min_cache = {}
+# alphabeta_max_cache = {}
 
+normal_cache = {}
+alphabeta_cache = {}
 
 def eprint(*args, **kwargs): #you can use this for debugging, as it will print to sterr and not stdout
     print(*args, file=sys.stderr, **kwargs)
@@ -38,6 +40,9 @@ def compute_utility(board, color):
 # Better heuristic value of board
 def compute_heuristic(board, color): #not implemented, optional
     #IMPLEMENT
+
+
+
     return 0 #change this!
 
 ############ MINIMAX ###############################
@@ -49,30 +54,31 @@ def opponent(color):
 
 def minimax_min_node(board, color, limit, caching = 0):
     #IMPLEMENT (and replace the line below)
+    opp = opponent(color)
 
     # returns a tuple: ((r,c), util)
     # where (r,c) is the best move with utility util
+    key = str((board, color))
+    if caching and key in normal_cache:
+        return normal_cache[key]
 
-    if caching:
-        if (board, color) in min_cache:
-            return min_cache[(board, color)]
-
-    moves = get_possible_moves(board, color)
+    moves = get_possible_moves(board, opp)
     if moves == [] or limit == 0:
         # we have reached a terminal state (base case)
-        return (None, compute_utility(board, opponent(color)))
+        return (None, compute_utility(board, color))
 
     min_util = float("inf")
-    best_move = moves[0]
+    best_move = None
 
-    for i in range(len(moves)):
-        util = minimax_max_node(play_move(board, color, moves[i][0], moves[i][1]), opponent(color), limit-1, caching)[1]
+    for move in moves:
+        new_board = play_move(board, opp, move[0], move[1])
+        util = minimax_max_node(new_board, color, limit-1, caching)[1]
         if util < min_util:
-            best_move = moves[i]
+            best_move = move
             min_util = util
     
     if caching:
-        min_cache[(board, color)] = (best_move, min_util)
+        normal_cache[key] = (best_move, min_util)
 
     return (best_move, min_util)
 
@@ -83,10 +89,9 @@ def minimax_max_node(board, color, limit, caching = 0): #returns highest possibl
 
     # returns a tuple: ((r,c), util)
     # where (r,c) is the best move with utility util
-
-    if caching:
-        if (board, color) in max_cache:
-            return max_cache[(board, color)]
+    key = str((board, color))
+    if caching and key in normal_cache:
+        return normal_cache[key]
 
     moves = get_possible_moves(board, color)
     if moves == [] or limit == 0:
@@ -94,16 +99,17 @@ def minimax_max_node(board, color, limit, caching = 0): #returns highest possibl
         return (None, compute_utility(board, color))
 
     max_util = float("-inf")
-    best_move = moves[0]
+    best_move = None
 
-    for i in range(len(moves)):
-        util = minimax_min_node(play_move(board, color, moves[i][0], moves[i][1]), opponent(color), limit-1, caching)[1]
+    for move in moves:
+        new_board = play_move(board, color, move[0], move[1])
+        util = minimax_min_node(new_board, color, limit-1, caching)[1]
         if util > max_util:
-            best_move = moves[i]
+            best_move = move
             max_util = util
 
     if caching:
-        max_cache[(board, color)] = (best_move, max_util)
+        normal_cache[key] = (best_move, max_util)
     
     return (best_move, max_util)
 
@@ -132,41 +138,38 @@ def select_move_minimax(board, color, limit, caching = 0):
 ############ ALPHA-BETA PRUNING #####################
 def alphabeta_min_node(board, color, alpha, beta, limit, caching = 0, ordering = 0):
     #IMPLEMENT (and replace the line below)
+    opp = opponent(color)
 
     # returns a tuple: ((r,c), util)
     # where (r,c) is the best move with utility util
+    key = str((board, color, alpha, beta))
+    if caching and key in alphabeta_cache:
+        return alphabeta_cache[key]
 
-    if caching:
-        if (board, color, alpha, beta) in alphabeta_min_cache:
-            return alphabeta_min_cache[(board, color, alpha, beta)]
-
-    moves = get_possible_moves(board, color)
+    moves = get_possible_moves(board, opp)
     if moves == [] or limit == 0:
         # we have reached a terminal state (base case)
-        return (None, compute_utility(board, opponent(color)))
+        return (None, compute_utility(board, color))
     
     min_util = float("inf")
     best_move = None
 
-    children_boards = []
-    for i in range(len(moves)):
-        children_boards.append(play_move(board, color, moves[i][0], moves[i][1]))
-
     if ordering:
-        children_boards.sort(key=lambda child_board: compute_utility(child_board, opponent(color)))
-        # check best move for min first: the move that gives the lowest utility
-
-    for i in range(len(children_boards)):
-        util = alphabeta_max_node(children_boards[i], opponent(color), alpha, beta, limit-1, caching, ordering)[1]
+        order = [(move, compute_utility(play_move(board, opp, *move), color)) for move in moves]
+        moves = [x[0] for x in sorted(order, key=lambda x: x[1])] # sort by biggest utility first
+    
+    for move in moves:
+        new_board = play_move(board, opp, move[0], move[1])
+        util = alphabeta_max_node(new_board, color, alpha, beta, limit-1, caching, ordering)[1]
         if util < min_util:
-            best_move = moves[i]
+            best_move = move
             min_util = util
         beta = min(beta, min_util)
         if alpha >= beta:
             break
     
     if caching:
-        alphabeta_min_cache[(board, color, alpha, beta)] = (best_move, min_util)
+        alphabeta_cache[key] = (best_move, min_util)
 
     return (best_move, min_util)
 
@@ -177,10 +180,9 @@ def alphabeta_max_node(board, color, alpha, beta, limit, caching = 0, ordering =
 
     # returns a tuple: ((r,c), util)
     # where (r,c) is the best move with utility util
-
-    if caching:
-        if (board, color, alpha, beta) in alphabeta_max_cache:
-            return alphabeta_max_cache[(board, color, alpha, beta)]
+    key = str((board, color, alpha, beta))
+    if caching and key in alphabeta_cache:
+        return alphabeta_cache[key]
 
     moves = get_possible_moves(board, color)
     if moves == [] or limit == 0:
@@ -190,25 +192,22 @@ def alphabeta_max_node(board, color, alpha, beta, limit, caching = 0, ordering =
     max_util = float("-inf")
     best_move = None
 
-    children_boards = []
-    for i in range(len(moves)):
-        children_boards.append(play_move(board, color, moves[i][0], moves[i][1]))
-
     if ordering:
-        children_boards.sort(key=lambda child_board: compute_utility(child_board, color), reverse=True)
-        # check best move for max first: the move that gives highest utility
-
-    for i in range(len(children_boards)):
-        util = alphabeta_min_node(children_boards[i], opponent(color), alpha, beta, limit-1, caching, ordering)[1]
+        order = [(move, compute_utility(play_move(board, color, *move), color)) for move in moves]
+        moves = [x[0] for x in sorted(order, reverse=True, key=lambda x: x[1])] # sort by biggest utility first
+    
+    for move in moves:
+        new_board = play_move(board, color, move[0], move[1])
+        util = alphabeta_min_node(new_board, color, alpha, beta, limit-1, caching, ordering)[1]
         if util > max_util:
-            best_move = moves[i]
+            best_move = move
             max_util = util
         alpha = max(alpha, max_util)
-        if alpha >= beta:
+        if beta <= alpha:
             break
 
     if caching:
-        alphabeta_max_cache[(board, color, alpha, beta)] = (best_move, max_util)
+        alphabeta_cache[key] = (best_move, max_util)
     
     return (best_move, max_util)
 
