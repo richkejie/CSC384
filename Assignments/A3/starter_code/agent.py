@@ -40,10 +40,34 @@ def compute_utility(board, color):
 # Better heuristic value of board
 def compute_heuristic(board, color): #not implemented, optional
     #IMPLEMENT
+    n = len(board)
+
+    # parity = 100 * (color's coins - opp's coints)/(color's coint + opp's coins)
+    score = get_score(board)
+    parity = 100 * compute_utility(board, color)/(score[0] + score[1])
+
+    # mobility = 100 * (num color's moves - num opp's moves)/(num color's moves + num opp's moves)
+    mobility = 0
+    num_color_moves = len(get_possible_moves(board, color))
+    num_opp_moves = len(get_possible_moves(board, opponent(color)))
+    if (num_color_moves + num_opp_moves != 0):
+        mobility = 100 * (num_color_moves - num_opp_moves)/(num_color_moves + num_opp_moves)
+
+    # edge = num color coins on the edges of the board (no, just corners...)
+    edge = 0
+    if board[0][0] == color:
+        edge += 1
+    if board[0][n-1] == color:
+        edge += 1
+    if board[n-1][n-1] == color:
+        edge += 1
+    if board[n-1][0] == color:
+        edge += 1
+    
+    return compute_utility(board, color) + parity + mobility + edge
 
 
-
-    return 0 #change this!
+    # return 0 #change this!
 
 ############ MINIMAX ###############################
 def opponent(color):
